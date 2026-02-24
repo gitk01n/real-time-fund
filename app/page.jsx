@@ -1686,35 +1686,48 @@ export default function HomePage() {
 
   const handleVerifyEmailOtp = async () => {
     setLoginError('');
-    if (!loginOtp || loginOtp.length < 4) {
-      setLoginError('请输入邮箱中的验证码');
+    
+    // 1. 基础校验：验证码通常是 6 位
+    if (!loginOtp || loginOtp.length < 6) {
+      setLoginError('请输入 6 位数字验证码');
       return;
     }
+    
     if (!isSupabaseConfigured) {
       showToast('未配置 Supabase，无法登录', 'error');
       return;
     }
+
     try {
       isExplicitLoginRef.current = true;
       setLoginLoading(true);
+      
+      // 2. 核心修改：将 type 从 'email' 改为 'magiclink'
       const { data, error } = await supabase.auth.verifyOtp({
         email: loginEmail.trim(),
         token: loginOtp.trim(),
-        type: 'email'
+        type: 'magiclink' // 必须是 magiclink 才能匹配你后台的模板逻辑
       });
+
       if (error) throw error;
+
+      // 3. 验证成功后的 UI 处理
       if (data?.user) {
         setLoginModalOpen(false);
         setLoginEmail('');
         setLoginOtp('');
         setLoginSuccess('');
         setLoginError('');
+        showToast('登录成功', 'success');
       }
     } catch (err) {
+      // 捕获并显示具体的错误信息（如验证码过期或错误）
       setLoginError(err.message || '验证失败，请检查验证码或稍后再试');
       isExplicitLoginRef.current = false;
+    } finally {
+      // 无论成功失败都重置加载状态
+      setLoginLoading(false);
     }
-    setLoginLoading(false);
   };
 
   // 登出
